@@ -1,7 +1,7 @@
 package guru.sfg.beer.inventory.service.web.mappers;
 
 import guru.sfg.beer.inventory.service.domain.BeerInventory;
-import guru.sfg.beer.inventory.service.web.model.BeerDto;
+import guru.sfg.brewery.model.BeerDto;
 import org.mapstruct.Mapper;
 
 /**
