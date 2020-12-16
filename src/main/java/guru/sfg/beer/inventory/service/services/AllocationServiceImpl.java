@@ -11,6 +11,9 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Created by jt on 2019-09-09.
+ */
 @Slf4j
 @RequiredArgsConstructor
 @Service
@@ -26,9 +29,8 @@ public class AllocationServiceImpl implements AllocationService {
         AtomicInteger totalAllocated = new AtomicInteger();
 
         beerOrderDto.getBeerOrderLines().forEach(beerOrderLine -> {
-            if((
-                    (beerOrderLine.getOrderQuantity() != null ? beerOrderLine.getOrderQuantity() : 0)
-                - (beerOrderLine.getOrderQuantity() != null ? beerOrderLine.getQuantityAllocated() : 0)) > 0) {
+            if ((((beerOrderLine.getOrderQuantity() != null ? beerOrderLine.getOrderQuantity() : 0)
+                    - (beerOrderLine.getQuantityAllocated() != null ? beerOrderLine.getQuantityAllocated() : 0)) > 0)) {
                 allocateBeerOrderLine(beerOrderLine);
             }
             totalOrdered.set(totalOrdered.get() + beerOrderLine.getOrderQuantity());
@@ -40,50 +42,46 @@ public class AllocationServiceImpl implements AllocationService {
         return totalOrdered.get() == totalAllocated.get();
     }
 
-    @Override
-    public void deallocateOrder(BeerOrderDto beerOrderDto) {
-
-       beerOrderDto.getBeerOrderLines().forEach(beerOrderLineDto -> {
-           BeerInventory beerInventory = BeerInventory.builder()
-                   .beerId(beerOrderLineDto.getBeerId())
-                   .upc(beerOrderLineDto.getUpc())
-                   .quantityOnHand(beerOrderLineDto.getQuantityAllocated())
-                   .build();
-
-           BeerInventory savedInventory = beerInventoryRepository.save(beerInventory);
-           log.debug("Saved Inventory for beer upc: " + savedInventory.getUpc() + " inventory id: " + savedInventory.getId());
-
-       });
-
-    }
-
     private void allocateBeerOrderLine(BeerOrderLineDto beerOrderLine) {
-
         List<BeerInventory> beerInventoryList = beerInventoryRepository.findAllByUpc(beerOrderLine.getUpc());
 
         beerInventoryList.forEach(beerInventory -> {
-            int inventory = (beerInventory.getQuantityOnHand() == null ? 0 : beerInventory.getQuantityOnHand());
-            int orderQty = (beerOrderLine.getOrderQuantity() == null ? 0 : beerOrderLine.getOrderQuantity());
-            int allocatedQty = (beerOrderLine.getQuantityAllocated() == null ? 0 : beerOrderLine.getQuantityAllocated());
+            int inventory = (beerInventory.getQuantityOnHand() == null) ? 0 : beerInventory.getQuantityOnHand();
+            int orderQty = (beerOrderLine.getOrderQuantity() == null) ? 0 : beerOrderLine.getOrderQuantity();
+            int allocatedQty = (beerOrderLine.getQuantityAllocated() == null) ? 0 : beerOrderLine.getQuantityAllocated();
             int qtyToAllocate = orderQty - allocatedQty;
 
-            if(inventory >= qtyToAllocate) { // ful allocation
+            if (inventory >= qtyToAllocate) { // full allocation
                 inventory = inventory - qtyToAllocate;
                 beerOrderLine.setQuantityAllocated(orderQty);
                 beerInventory.setQuantityOnHand(inventory);
 
                 beerInventoryRepository.save(beerInventory);
-
-            } else if(inventory > 0 ) { // partial allocation
+            } else if (inventory > 0) { //partial allocation
                 beerOrderLine.setQuantityAllocated(allocatedQty + inventory);
                 beerInventory.setQuantityOnHand(0);
+
             }
 
-            if(beerInventory.getQuantityOnHand() == 0 ) {
+            if (beerInventory.getQuantityOnHand() == 0) {
                 beerInventoryRepository.delete(beerInventory);
             }
-
         });
+
     }
 
+    @Override
+    public void deallocateOrder(BeerOrderDto beerOrderDto) {
+        beerOrderDto.getBeerOrderLines().forEach(beerOrderLineDto -> {
+            BeerInventory beerInventory = BeerInventory.builder()
+                    .beerId(beerOrderLineDto.getBeerId())
+                    .upc(beerOrderLineDto.getUpc())
+                    .quantityOnHand(beerOrderLineDto.getQuantityAllocated())
+                    .build();
+
+            BeerInventory savedInventory = beerInventoryRepository.save(beerInventory);
+
+            log.debug("Saved Inventory for beer upc: " + savedInventory.getUpc() + " inventory id: " + savedInventory.getId());
+        });
+    }
 }
